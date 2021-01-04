@@ -39,7 +39,7 @@ class FlappyBirdEnv(gym.Env):
 
         # actions and observation space
         self.action_space = spaces.Discrete(2)
-        self.observation_space = spaces.Box(low=0, high=255, shape=(self.screenheight, self.screenwidth, 3),
+        self.observation_space = spaces.Box(low=0, high=255, shape=(self.screenwidth, self.screenheight, 3),
                                             dtype=np.uint8)
 
     def step(self, input_actions):
