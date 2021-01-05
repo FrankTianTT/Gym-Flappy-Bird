@@ -3,6 +3,7 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
 import sys
+import time
 import random
 import pygame
 from gym_flappy_bird.envs import flappy_bird_utils
@@ -104,7 +105,7 @@ class FlappyBirdEnv(gym.Env):
             # self.sounds['hit'].play()
             # self.sounds['die'].play()
             terminal = True
-            self.__init__()
+            # self.__init__()
             reward = -1
 
         # draw sprites
