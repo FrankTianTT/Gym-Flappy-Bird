@@ -64,11 +64,6 @@ class FlappyBirdFeatureEnv(FlappyBirdEnv):
         info: upper_pipes, lower_pipes, player_vel_y, player_y
         """
         obs = []
-        if info['upper_pipes'][0]['x'] > self.player_x:
-            obs.append(self.low_pipes[0])
-            obs.append((self.low_pipes[1] + self.high_pipes[1])/2)
-            obs.append(self.low_pipes[2])
-            obs.append((self.low_pipes[3] + self.high_pipes[3])/2)
 
         for i in range(len(info['upper_pipes'])):
             obs.append(info['upper_pipes'][i]['x'])     # [-52, 432]
