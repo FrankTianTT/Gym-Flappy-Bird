@@ -9,3 +9,8 @@ register(
     id='FlappyBirdFeature-v0',
     entry_point='gym_flappy_bird.envs:FlappyBirdFeatureEnv',
 )
+
+register(
+    id='FlappyBirdFeature-v1',
+    entry_point='gym_flappy_bird.envs:FlappyBirdFeatureEnv1',
+)

@@ -44,8 +44,8 @@ class FlappyBirdFeatureEnv(FlappyBirdEnv):
         ]
         self.high = self.high_pipes * 3 + [high_player_vel_y, high_player_y]
         self.high = np.array(self.high)
-        self.observation_space = spaces.Box(low=np.zeros(14),
-                                            high=np.ones(14),
+        self.observation_space = spaces.Box(low=np.zeros(len(self.low)),
+                                            high=np.ones(len(self.low)),
                                             dtype=np.float)
 
     def reset(self):
@@ -80,4 +80,44 @@ class FlappyBirdFeatureEnv(FlappyBirdEnv):
         obs.append(info['player_vel_y'])                # [-8, 10]
         obs.append(info['player_y'])                    # [0, 512]
 
+        return (np.array(obs) - self.low) / (self.high - self.low)
+
+class FlappyBirdFeatureEnv1(FlappyBirdEnv):
+    def __init__(self, is_demo=False):
+        super(FlappyBirdFeatureEnv1, self).__init__(is_demo=is_demo)
+
+        low_player_vel_y = self.player_min_vel_y
+        high_player_vel_y = self.player_max_vel_y
+        self.low = np.array([0, -256, low_player_vel_y])
+        self.high = np.array([270, 256, high_player_vel_y])
+        self.observation_space = spaces.Box(low=np.zeros(len(self.low)),
+                                            high=np.ones(len(self.low)),
+                                            dtype=np.float)
+    def reset(self):
+        self._pre_reset()
+        obs, reward, terminal, info = self.step(0)
+        return obs
+
+    def step(self, action):
+        image_data, reward, terminal, info = super(FlappyBirdFeatureEnv1, self).step(action)
+        # print(self.info2obs(info))
+
+        return self.info2obs(info), reward, terminal, {'image_data': image_data}
+
+    def info2obs(self, info):
+        """
+        info: upper_pipes, lower_pipes, player_vel_y, player_y
+        """
+        obs = []
+
+        for i in range(len(info['upper_pipes'])):
+            if info['upper_pipes'][i]['x'] > self.player_x:
+                diff_x = info['upper_pipes'][i]['x'] - self.player_x
+                mid = ((info['upper_pipes'][i]['y'] + self.pipe_height) + info['lower_pipes'][i]['y']) / 2
+                diff_y = mid - self.player_y
+                obs.append(diff_x)
+                obs.append(diff_x)
+                break
+
+        obs.append(info['player_vel_y'])
         return (np.array(obs) - self.low) / (self.high - self.low)

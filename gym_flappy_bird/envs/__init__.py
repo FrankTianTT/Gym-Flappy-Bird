@@ -1,2 +1,3 @@
 from gym_flappy_bird.envs.flappy_bird_env import FlappyBirdEnv
 from gym_flappy_bird.envs.flappy_bird_feature_env import FlappyBirdFeatureEnv
+from gym_flappy_bird.envs.flappy_bird_feature_env import FlappyBirdFeatureEnv1
