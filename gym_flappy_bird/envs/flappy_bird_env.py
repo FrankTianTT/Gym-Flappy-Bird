@@ -16,6 +16,7 @@ class FlappyBirdEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, is_demo=False):
+        # fix the fps when is_demo = True
         self.is_demo = is_demo
         self.fps = 30
         self.screenwidth = 288
@@ -27,8 +28,9 @@ class FlappyBirdEnv(gym.Env):
         pygame.display.set_caption('Flappy Bird')
 
         self.images, self.sounds, self.hitmasks = flappy_bird_utils.load()
-        self.pipegapsize = 100  # gap between upper and lower part of pipe
-        self.basey = self.screenheight * 0.79
+        # gap between upper and lower part of pipe
+        self.pipe_gap_size = 100
+        self.base_y = self.screenheight * 0.79
 
         self.player_width = self.images['player'][0].get_width()
         self.player_height = self.images['player'][0].get_height()
@@ -52,109 +54,123 @@ class FlappyBirdEnv(gym.Env):
         # input_actions[0] == 1: do nothing
         # input_actions[1] == 1: flap the bird
         if input_actions == 1:
-            if self.playery > -2 * self.player_height:
-                self.playerVelY = self.playerFlapAcc
-                self.playerFlapped = True
-                # self.sounds['wing'].play()
+            if self.player_y > -2 * self.player_height:
+                self.player_vel_y = self.player_flap_acc
+                self.player_flapped = True
+                if self.is_demo:
+                    self.sounds['wing'].play()
 
         # check for score
-        playerMidPos = self.playerx + self.player_width / 2
-        for pipe in self.upperPipes:
-            pipeMidPos = pipe['x'] + self.pipe_width / 2
-            if pipeMidPos <= playerMidPos < pipeMidPos + 4:
+        player_mid_pos = self.player_x + self.player_width / 2
+        for pipe in self.upper_pipes:
+            pipe_mid_pos = pipe['x'] + self.pipe_width / 2
+            if pipe_mid_pos <= player_mid_pos < pipe_mid_pos + 4:
                 self.score += 1
-                # self.sounds['point'].play()
+                if self.is_demo:
+                    self.sounds['point'].play()
                 reward = 1
 
         # playerIndex basex change
-        if (self.loopIter + 1) % 3 == 0:
-            self.playerIndex = next(self.player_index_gen)
-        self.loopIter = (self.loopIter + 1) % 30
-        self.basex = -((-self.basex + 100) % self.baseShift)
+        if (self.loop_iter + 1) % 3 == 0:
+            self.player_index = next(self.player_index_gen)
+        self.loop_iter = (self.loop_iter + 1) % 30
+        self.base_x = -((-self.base_x + 100) % self.base_shift)
 
         # player's movement
-        if self.playerVelY < self.playerMaxVelY and not self.playerFlapped:
-            self.playerVelY += self.playerAccY
-        if self.playerFlapped:
-            self.playerFlapped = False
-        self.playery += min(self.playerVelY, self.basey - self.playery - self.player_height)
-        if self.playery < 0:
-            self.playery = 0
+        if self.player_vel_y < self.player_max_vel_y and not self.player_flapped:
+            self.player_vel_y += self.player_acc_y
+        if self.player_flapped:
+            self.player_flapped = False
+        self.player_y += min(self.player_vel_y, self.base_y - self.player_y - self.player_height)
+        if self.player_y < 0:
+            self.player_y = 0
 
         # move pipes to left
-        for uPipe, lPipe in zip(self.upperPipes, self.lowerPipes):
-            uPipe['x'] += self.pipeVelX
-            lPipe['x'] += self.pipeVelX
+        for upper_pipe, lower_pipe in zip(self.upper_pipes, self.lower_pipes):
+            upper_pipe['x'] += self.pipe_vel_x
+            lower_pipe['x'] += self.pipe_vel_x
 
         # add new pipe when first pipe is about to touch left of screen
-        if 0 < self.upperPipes[0]['x'] < 5:
-            newPipe = self._getRandomPipe()
-            self.upperPipes.append(newPipe[0])
-            self.lowerPipes.append(newPipe[1])
+        if 0 < self.upper_pipes[0]['x'] < 5:
+            new_pipe = self._get_random_pipe()
+            self.upper_pipes.append(new_pipe[0])
+            self.lower_pipes.append(new_pipe[1])
 
         # remove first pipe if its out of the screen
-        if self.upperPipes[0]['x'] < -self.pipe_width:
-            self.upperPipes.pop(0)
-            self.lowerPipes.pop(0)
+        if self.upper_pipes[0]['x'] < -self.pipe_width:
+            self.upper_pipes.pop(0)
+            self.lower_pipes.pop(0)
 
         # check if crash here
-        isCrash = self._checkCrash({'x': self.playerx, 'y': self.playery,
-                                    'index': self.playerIndex},
-                                   self.upperPipes, self.lowerPipes)
-        if isCrash:
-            # self.sounds['hit'].play()
-            # self.sounds['die'].play()
+        is_crash = self._check_crash({'x': self.player_x, 'y': self.player_y, 'index': self.player_index},
+                                     self.upper_pipes,
+                                     self.lower_pipes)
+        if is_crash:
+            if self.is_demo:
+                self.sounds['hit'].play()
+                self.sounds['die'].play()
             terminal = True
-            # self.__init__()
+            self.__init__(self.is_demo)
             reward = -1
 
         # draw sprites
 
         self.screen.blit(self.images['background'], (0, 0))
 
-        for uPipe, lPipe in zip(self.upperPipes, self.lowerPipes):
-            self.screen.blit(self.images['pipe'][0], (uPipe['x'], uPipe['y']))
-            self.screen.blit(self.images['pipe'][1], (lPipe['x'], lPipe['y']))
+        for upper_pipe, lower_pipe in zip(self.upper_pipes, self.lower_pipes):
+            self.screen.blit(self.images['pipe'][0], (upper_pipe['x'], upper_pipe['y']))
+            self.screen.blit(self.images['pipe'][1], (lower_pipe['x'], lower_pipe['y']))
 
-        self.screen.blit(self.images['base'], (self.basex, self.basey))
+        self.screen.blit(self.images['base'], (self.base_x, self.base_y))
         # print score so player overlaps the score
-        # showScore(self.score)
-        self.screen.blit(self.images['player'][self.playerIndex],
-                         (self.playerx, self.playery))
+        if self.is_demo:
+            self._show_score(self.score)
+        self.screen.blit(self.images['player'][self.player_index],
+                         (self.player_x, self.player_y))
 
         image_data = pygame.surfarray.array3d(pygame.display.get_surface())
 
-        # print self.upperPipes[0]['y'] + self.pipe_height - int(self.basey * 0.2)
-        return image_data, reward, terminal, {}
+        # feature info, which is use for FlappyBirdFeature-env
+        info = {'upper_pipes': self.upper_pipes,
+                'lower_pipes': self.lower_pipes,
+                'player_vel_y': self.player_vel_y,
+                'player_y': self.player_y}
+
+        return image_data, reward, terminal, info
+
+    def _pre_reset(self):
+        self.score = self.player_index = self.loop_iter = 0
+        # player is initialized in a fixed position, which is (screenwidth * 0.2, screenheight - player_height) / 2)
+        self.player_x = int(self.screenwidth * 0.2)
+        self.player_y = int((self.screenheight - self.player_height) / 2)
+        # base is the land in the below of the window
+        self.base_x = 0
+        self.base_shift = self.images['base'].get_width() - self.backgroud_width
+
+        # generate two pipe when reset the game
+        new_pipe1 = self._get_random_pipe()
+        new_pipe2 = self._get_random_pipe()
+        self.upper_pipes = [
+            {'x': self.screenwidth, 'y': new_pipe1[0]['y']},
+            {'x': self.screenwidth + (self.screenwidth / 2), 'y': new_pipe2[0]['y']},
+        ]
+        self.lower_pipes = [
+            {'x': self.screenwidth, 'y': new_pipe1[1]['y']},
+            {'x': self.screenwidth + (self.screenwidth / 2), 'y': new_pipe2[1]['y']},
+        ]
+
+        # player velocity, max velocity, downward acceleration, acceleration on flap
+        self.pipe_vel_x = -4
+        self.player_vel_y = 0           # player's velocity along Y, default same as playerFlapped
+        self.player_max_vel_y = 10      # max vel along Y, max descend speed
+        self.player_min_vel_y = -8      # min vel along Y, max ascend speed
+        self.player_acc_y = 1           # players downward acceleration
+        self.player_flap_acc = -7       # players speed on flapping
+        self.player_flapped = False     # True when player flaps
 
     def reset(self):
-        self.score = self.playerIndex = self.loopIter = 0
-        self.playerx = int(self.screenwidth * 0.2)
-        self.playery = int((self.screenheight - self.player_height) / 2)
-        self.basex = 0
-        self.baseShift = self.images['base'].get_width() - self.backgroud_width
-
-        newPipe1 = self._getRandomPipe()
-        newPipe2 = self._getRandomPipe()
-        self.upperPipes = [
-            {'x': self.screenwidth, 'y': newPipe1[0]['y']},
-            {'x': self.screenwidth + (self.screenwidth / 2), 'y': newPipe2[0]['y']},
-        ]
-        self.lowerPipes = [
-            {'x': self.screenwidth, 'y': newPipe1[1]['y']},
-            {'x': self.screenwidth + (self.screenwidth / 2), 'y': newPipe2[1]['y']},
-        ]
-
-        # player velocity, max velocity, downward accleration, accleration on flap
-        self.pipeVelX = -4
-        self.playerVelY = 0  # player's velocity along Y, default same as playerFlapped
-        self.playerMaxVelY = 10  # max vel along Y, max descend speed
-        self.playerMinVelY = -8  # min vel along Y, max ascend speed
-        self.playerAccY = 1  # players downward accleration
-        self.playerFlapAcc = -7  # players speed on flapping
-        self.playerFlapped = False  # True when player flaps
-
-        image_data, _, _, _ = self.step(0)
+        self._pre_reset()
+        image_data, reward, terminal, info = self.step(0)
 
         return image_data
 
@@ -163,22 +179,24 @@ class FlappyBirdEnv(gym.Env):
         if self.is_demo:
             self.fpsclock.tick(self.fps)
 
-    def _getRandomPipe(self):
-        """returns a randomly generated pipe"""
+    def _get_random_pipe(self):
+        """
+        returns a randomly generated pipe, which is a list of dict of upper and lower pipe.
+        """
         # y of gap between upper and lower pipe
-        gapYs = [20, 30, 40, 50, 60, 70, 80, 90]
-        index = random.randint(0, len(gapYs) - 1)
-        gapY = gapYs[index]
+        gap_y_list = [20, 30, 40, 50, 60, 70, 80, 90]
+        index = random.randint(0, len(gap_y_list) - 1)
+        gap_y = gap_y_list[index]
 
-        gapY += int(self.basey * 0.2)
-        pipeX = self.screenwidth + 10
+        gap_y += int(self.base_y * 0.2)
+        pipe_x = self.screenwidth + 10
 
         return [
-            {'x': pipeX, 'y': gapY - self.pipe_height},  # upper pipe
-            {'x': pipeX, 'y': gapY + self.pipegapsize},  # lower pipe
+            {'x': pipe_x, 'y': gap_y - self.pipe_height},  # upper pipe
+            {'x': pipe_x, 'y': gap_y + self.pipe_gap_size},  # lower pipe
         ]
 
-    def _showScore(self, score):
+    def _show_score(self, score):
         """displays score in center of screen"""
         scoreDigits = [int(x) for x in list(str(score))]
         totalWidth = 0  # total width of all numbers to be printed
@@ -192,14 +210,14 @@ class FlappyBirdEnv(gym.Env):
             self.screen.blit(self.images['numbers'][digit], (Xoffset, self.screenheight * 0.1))
             Xoffset += self.images['numbers'][digit].get_width()
 
-    def _checkCrash(self, player, upperPipes, lowerPipes):
+    def _check_crash(self, player, upperPipes, lowerPipes):
         """returns True if player collders with base or pipes."""
         pi = player['index']
         player['w'] = self.images['player'][0].get_width()
         player['h'] = self.images['player'][0].get_height()
 
         # if player crashes into ground
-        if player['y'] + player['h'] >= self.basey - 1:
+        if player['y'] + player['h'] >= self.base_y - 1:
             return True
         else:
 

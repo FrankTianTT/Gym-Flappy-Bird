@@ -1,11 +1,12 @@
 import gym_flappy_bird
 import gym
 
-env = gym.make("FlappyBirdFeature-v0", is_demo=True)
+env = gym.make("FlappyBird-v0", is_demo=True)
 obs = env.reset()
 
 
 if __name__ == "__main__":
+    print(env.base_y)
 
     rewards = 0
     time_steps = 0
