@@ -40,6 +40,9 @@ class FlappyBirdEnv(gym.Env):
 
         self.player_index_gen = cycle([0, 1, 2, 1])
 
+        self.player_max_vel_y = 10      # max vel along Y, max descend speed
+        self.player_min_vel_y = -8      # min vel along Y, max ascend speed
+
         # actions and observation space
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Box(low=0, high=255, shape=(self.screenwidth, self.screenheight, 3),
@@ -136,6 +139,9 @@ class FlappyBirdEnv(gym.Env):
                 'player_vel_y': self.player_vel_y,
                 'player_y': self.player_y}
 
+        # print('before player_: x', sum([1 if i['x'] > self.player_x else 0 for i in self.upper_pipes]))
+        # print('after  player_x: ', sum([0 if i['x'] > self.player_x else 1 for i in self.upper_pipes]))
+
         return image_data, reward, terminal, info
 
     def _pre_reset(self):
@@ -162,8 +168,6 @@ class FlappyBirdEnv(gym.Env):
         # player velocity, max velocity, downward acceleration, acceleration on flap
         self.pipe_vel_x = -4
         self.player_vel_y = 0           # player's velocity along Y, default same as playerFlapped
-        self.player_max_vel_y = 10      # max vel along Y, max descend speed
-        self.player_min_vel_y = -8      # min vel along Y, max ascend speed
         self.player_acc_y = 1           # players downward acceleration
         self.player_flap_acc = -7       # players speed on flapping
         self.player_flapped = False     # True when player flaps
