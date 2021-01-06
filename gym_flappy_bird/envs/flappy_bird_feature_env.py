@@ -15,8 +15,12 @@ from itertools import cycle
 class FlappyBirdFeatureEnv(FlappyBirdEnv):
     def __init__(self, is_demo=False):
         super(FlappyBirdFeatureEnv, self).__init__(is_demo=is_demo)
-        self.action_space = spaces.Discrete(2)
-        self.observation_space = spaces.Box(low=-300, high=300, shape=([14]), dtype=np.uint8)
+
+        self.low = np.array([-52, -220, -52, 200, -52, -220, -52, 200, -8, 0])
+        self.high = np.array([432, -140, 432, 280, 432, -140, 432, 280, 10, 512])
+        self.observation_space = spaces.Box(low=np.full(shape=[10], fill_value=0),
+                                            high=np.full(shape=[10], fill_value=1),
+                                            dtype=np.float)
 
     def reset(self):
         self._pre_reset()
@@ -27,29 +31,26 @@ class FlappyBirdFeatureEnv(FlappyBirdEnv):
         image_data, reward, terminal, info = super(FlappyBirdFeatureEnv, self).step(action)
         # print(self.info2obs(info))
 
-        return self.info2obs(info), reward, terminal, {'image_data': image_data}
+        return self.info2obs(info, self.low, self.high), reward, terminal, {'image_data': image_data}
 
     @staticmethod
-    def info2obs(info):
+    def info2obs(info, low, high):
         """
         info: upper_pipes, lower_pipes, player_vel_y, player_y
         lower_bound of pipes_x = - pipe_width = - 52
-        upper_bound of pipes_x = 288 + 10 = 298
+        upper_bound of pipes_x = 288 + 144 = 432
         lower_bound of upper_pipes_x = 20 + base_y * 0.2 - pipe_height = 20 + 80 - 320 = - 220
         upper_bound of upper_pipes_x = 90 + base_y * 0.2 - pipe_height = 90 + 81 - 320 = - 149
         lower_bound of lower_pipes_x = 20 + base_y * 0.2 + pipe_gap_size = 20 + 81 + 100 = 201
         upper_bound of lower_pipes_x = 90 + base_y * 0.2 + pipe_gap_size = 90 + 81 + 100 = 271
         """
         obs = []
-        # number of upper_pipes and lower_pipes is between 2 and 3, so this 3 as placeholder
-        for i in range(3):
-            if len(info['upper_pipes']) <= i: # case of length = 2
-                obs.extend([0, 0, 0, 0])
-                break
-            obs.append(info['upper_pipes'][i]['x'])
-            obs.append(info['upper_pipes'][i]['y'])
-            obs.append(info['lower_pipes'][i]['x'])
-            obs.append(info['lower_pipes'][i]['y'])
-        obs.append(info['player_vel_y'])
-        obs.append(info['player_y'])
-        return np.array(obs)
+        for i in range(2):
+            obs.append(info['upper_pipes'][i]['x'])     # [-52, 432]
+            obs.append(info['upper_pipes'][i]['y'])     # [-220, -149]
+            obs.append(info['lower_pipes'][i]['x'])     # [-52, 432]
+            obs.append(info['lower_pipes'][i]['y'])     # [201. 271]
+        obs.append(info['player_vel_y'])                # [-8, 10]
+        obs.append(info['player_y'])                    # [0, 512]
+
+        return (np.array(obs) - low) / (high - low)

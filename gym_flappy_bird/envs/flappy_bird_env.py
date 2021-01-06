@@ -190,7 +190,6 @@ class FlappyBirdEnv(gym.Env):
 
         gap_y += int(self.base_y * 0.2)
         pipe_x = self.screenwidth + 10
-
         return [
             {'x': pipe_x, 'y': gap_y - self.pipe_height},  # upper pipe
             {'x': pipe_x, 'y': gap_y + self.pipe_gap_size},  # lower pipe
