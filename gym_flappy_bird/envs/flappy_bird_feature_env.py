@@ -116,7 +116,7 @@ class FlappyBirdFeatureEnv1(FlappyBirdEnv):
                 mid = ((info['upper_pipes'][i]['y'] + self.pipe_height) + info['lower_pipes'][i]['y']) / 2
                 diff_y = mid - self.player_y
                 obs.append(diff_x)
-                obs.append(diff_x)
+                obs.append(diff_y)
                 break
 
         obs.append(info['player_vel_y'])
